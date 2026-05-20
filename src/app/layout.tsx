@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/lib/auth";
+import { DevRevPlug } from "@/components/devrev-plug";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -30,6 +31,7 @@ export default async function RootLayout({
         <SessionProvider session={session}>
           {children}
           <Toaster richColors position="top-right" />
+          <DevRevPlug />
         </SessionProvider>
       </body>
     </html>
