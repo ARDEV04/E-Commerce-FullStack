@@ -4,16 +4,13 @@ import { format } from "date-fns";
 import ResolveDisputeButton from "@/components/admin/ResolveDisputeButton";
 
 export default async function AdminDisputesPage() {
-  let disputes: Awaited<ReturnType<typeof prisma.dispute.findMany>> = [];
-  try {
-    disputes = await prisma.dispute.findMany({
-      include: {
-        user: { select: { name: true, email: true } },
-        order: { select: { id: true, total: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-  } catch { /* DB unreachable */ }
+  const disputes = await prisma.dispute.findMany({
+    include: {
+      user: { select: { name: true, email: true } },
+      order: { select: { id: true, total: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  }).catch(() => []);
 
   const statusColors: Record<string, string> = {
     OPEN: "bg-red-100 text-red-700",

@@ -11,46 +11,36 @@ export default async function SellerDashboardPage() {
   const session = await auth();
   if (!session) redirect("/login");
 
-  let seller: Awaited<ReturnType<typeof prisma.sellerProfile.findUnique>> = null;
-  try {
-    seller = await prisma.sellerProfile.findUnique({
-      where: { userId: session.user.id },
-      include: { _count: { select: { products: true } } },
-    });
-  } catch { /* DB unreachable */ }
+  const seller = await prisma.sellerProfile.findUnique({
+    where: { userId: session.user.id },
+    include: { _count: { select: { products: true } } },
+  }).catch(() => null);
 
   if (!seller) redirect("/seller/apply");
 
-  let orders: Awaited<ReturnType<typeof prisma.order.findMany>> = [];
-  let revenue: { _sum: { price: number | null } } = { _sum: { price: null } };
-  let totalOrders = 0;
-  let avgRating: { _avg: { rating: number | null } } = { _avg: { rating: null } };
-
-  try {
-    [orders, revenue, totalOrders, avgRating] = await Promise.all([
-      prisma.order.findMany({
-        where: { items: { some: { sellerId: seller.id } } },
-        include: {
-          items: {
-            where: { sellerId: seller.id },
-            include: { product: { select: { title: true, images: true } } },
-          },
-          customer: { select: { name: true } },
+  const [orders, revenue, totalOrders, avgRating] = await Promise.all([
+    prisma.order.findMany({
+      where: { items: { some: { sellerId: seller.id } } },
+      include: {
+        items: {
+          where: { sellerId: seller.id },
+          include: { product: { select: { title: true, images: true } } },
         },
-        orderBy: { createdAt: "desc" },
-        take: 5,
-      }),
-      prisma.orderItem.aggregate({
-        where: { sellerId: seller.id, order: { status: { notIn: ["CANCELLED", "REFUNDED"] } } },
-        _sum: { price: true },
-      }),
-      prisma.order.count({ where: { items: { some: { sellerId: seller.id } } } }),
-      prisma.review.aggregate({
-        where: { product: { sellerId: seller.id } },
-        _avg: { rating: true },
-      }),
-    ]);
-  } catch { /* DB unreachable */ }
+        customer: { select: { name: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    }).catch(() => []),
+    prisma.orderItem.aggregate({
+      where: { sellerId: seller.id, order: { status: { notIn: ["CANCELLED", "REFUNDED"] } } },
+      _sum: { price: true },
+    }).catch(() => ({ _sum: { price: null } })),
+    prisma.order.count({ where: { items: { some: { sellerId: seller.id } } } }).catch(() => 0),
+    prisma.review.aggregate({
+      where: { product: { sellerId: seller.id } },
+      _avg: { rating: true },
+    }).catch(() => ({ _avg: { rating: null } })),
+  ]);
 
   const stats = [
     {

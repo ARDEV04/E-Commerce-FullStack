@@ -12,24 +12,20 @@ export default async function SellerProductsPage() {
   const session = await auth();
   if (!session) redirect("/login");
 
-  let seller: Awaited<ReturnType<typeof prisma.sellerProfile.findUnique>> = null;
-  try {
-    seller = await prisma.sellerProfile.findUnique({ where: { userId: session.user.id } });
-  } catch { /* DB unreachable */ }
+  const seller = await prisma.sellerProfile.findUnique({
+    where: { userId: session.user.id },
+  }).catch(() => null);
 
   if (!seller) redirect("/seller/apply");
 
-  let products: Awaited<ReturnType<typeof prisma.product.findMany>> = [];
-  try {
-    products = await prisma.product.findMany({
-      where: { sellerId: seller.id, status: { not: "DELETED" } },
-      include: {
-        category: { select: { name: true } },
-        _count: { select: { reviews: true, orderItems: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-  } catch { /* DB unreachable */ }
+  const products = await prisma.product.findMany({
+    where: { sellerId: seller.id, status: { not: "DELETED" } },
+    include: {
+      category: { select: { name: true } },
+      _count: { select: { reviews: true, orderItems: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  }).catch(() => []);
 
   const statusColor: Record<string, string> = {
     ACTIVE: "border-green-300 text-green-700 bg-green-50",

@@ -3,16 +3,13 @@ import AddCategoryForm from "@/components/admin/AddCategoryForm";
 import { Badge } from "@/components/ui/badge";
 
 export default async function AdminCategoriesPage() {
-  let categories: Awaited<ReturnType<typeof prisma.category.findMany>> = [];
-  try {
-    categories = await prisma.category.findMany({
-      include: {
-        children: true,
-        _count: { select: { products: true } },
-      },
-      orderBy: { name: "asc" },
-    });
-  } catch { /* DB unreachable */ }
+  const categories = await prisma.category.findMany({
+    include: {
+      children: true,
+      _count: { select: { products: true } },
+    },
+    orderBy: { name: "asc" },
+  }).catch(() => []);
 
   return (
     <div>

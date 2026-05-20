@@ -10,19 +10,14 @@ export default async function AdminSellersPage({
 }) {
   const { status } = await searchParams;
 
-  let sellers: Awaited<ReturnType<typeof prisma.sellerProfile.findMany<{ include: { user: { select: { name: true; email: true; createdAt: true } }; _count: { select: { products: true } } } }>>> = [];
-  try {
-    sellers = await prisma.sellerProfile.findMany({
-      where: status ? { status: status as "PENDING" | "APPROVED" | "SUSPENDED" } : undefined,
-      include: {
-        user: { select: { name: true, email: true, createdAt: true } },
-        _count: { select: { products: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-  } catch {
-    // DB unreachable — render with empty state
-  }
+  const sellers = await prisma.sellerProfile.findMany({
+    where: status ? { status: status as "PENDING" | "APPROVED" | "SUSPENDED" } : undefined,
+    include: {
+      user: { select: { name: true, email: true, createdAt: true } },
+      _count: { select: { products: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  }).catch(() => []);
 
   const statusColors: Record<string, string> = {
     PENDING: "bg-yellow-100 text-yellow-700 border-yellow-300",
