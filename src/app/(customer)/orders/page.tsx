@@ -22,15 +22,18 @@ export default async function OrdersPage() {
   const session = await auth();
   if (!session) redirect("/login?callbackUrl=/orders");
 
-  const orders = await prisma.order.findMany({
-    where: { customerId: session.user.id },
-    include: {
-      items: {
-        include: { product: { select: { title: true, images: true } } },
+  let orders: Awaited<ReturnType<typeof prisma.order.findMany>> = [];
+  try {
+    orders = await prisma.order.findMany({
+      where: { customerId: session.user.id },
+      include: {
+        items: {
+          include: { product: { select: { title: true, images: true } } },
+        },
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      orderBy: { createdAt: "desc" },
+    });
+  } catch { /* DB unreachable */ }
 
   if (orders.length === 0) {
     return (

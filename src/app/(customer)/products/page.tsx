@@ -42,21 +42,25 @@ async function ProductsGrid({ params }: { params: SearchParams }) {
   const sortBy = params.sortBy ?? "createdAt";
   const order = (params.order ?? "desc") as "asc" | "desc";
 
-  const [products, total] = await prisma.$transaction([
-    prisma.product.findMany({
-      where,
-      include: {
-        category: { select: { name: true, slug: true } },
-        seller: { select: { storeName: true, rating: true, id: true } },
-        reviews: { select: { rating: true } },
-        _count: { select: { reviews: true } },
-      },
-      orderBy: { [sortBy]: order },
-      skip: (page - 1) * limit,
-      take: limit,
-    }),
-    prisma.product.count({ where }),
-  ]);
+  let products: Awaited<ReturnType<typeof prisma.product.findMany>> = [];
+  let total = 0;
+  try {
+    [products, total] = await prisma.$transaction([
+      prisma.product.findMany({
+        where,
+        include: {
+          category: { select: { name: true, slug: true } },
+          seller: { select: { storeName: true, rating: true, id: true } },
+          reviews: { select: { rating: true } },
+          _count: { select: { reviews: true } },
+        },
+        orderBy: { [sortBy]: order },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.product.count({ where }),
+    ]);
+  } catch { /* DB unreachable */ }
 
   if (products.length === 0) {
     return (
@@ -103,10 +107,13 @@ export default async function ProductsPage({
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
-  const categories = await prisma.category.findMany({
-    orderBy: { name: "asc" },
-    select: { name: true, slug: true },
-  });
+  let categories: { name: string; slug: string }[] = [];
+  try {
+    categories = await prisma.category.findMany({
+      orderBy: { name: "asc" },
+      select: { name: true, slug: true },
+    });
+  } catch { /* DB unreachable */ }
 
   return (
     <div className="container mx-auto px-4 py-8">

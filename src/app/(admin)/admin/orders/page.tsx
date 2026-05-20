@@ -13,14 +13,19 @@ const statusColors: Record<string, string> = {
 };
 
 export default async function AdminOrdersPage() {
-  const orders = await prisma.order.findMany({
-    include: {
-      customer: { select: { name: true, email: true } },
-      _count: { select: { items: true } },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-  });
+  let orders: Awaited<ReturnType<typeof prisma.order.findMany<{ include: { customer: { select: { name: true; email: true } }; _count: { select: { items: true } } } }>>> = [];
+  try {
+    orders = await prisma.order.findMany({
+      include: {
+        customer: { select: { name: true, email: true } },
+        _count: { select: { items: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+  } catch {
+    // DB unreachable — render with empty state
+  }
 
   return (
     <div>

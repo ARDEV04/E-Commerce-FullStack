@@ -19,23 +19,27 @@ export default async function SellerOrdersPage() {
   const session = await auth();
   if (!session) redirect("/login");
 
-  const seller = await prisma.sellerProfile.findUnique({
-    where: { userId: session.user.id },
-  });
+  let seller: Awaited<ReturnType<typeof prisma.sellerProfile.findUnique>> = null;
+  try {
+    seller = await prisma.sellerProfile.findUnique({ where: { userId: session.user.id } });
+  } catch { /* DB unreachable */ }
   if (!seller) redirect("/seller/apply");
 
-  const orders = await prisma.order.findMany({
-    where: { items: { some: { sellerId: seller.id } } },
-    include: {
-      items: {
-        where: { sellerId: seller.id },
-        include: { product: { select: { title: true } } },
+  let orders: Awaited<ReturnType<typeof prisma.order.findMany>> = [];
+  try {
+    orders = await prisma.order.findMany({
+      where: { items: { some: { sellerId: seller.id } } },
+      include: {
+        items: {
+          where: { sellerId: seller.id },
+          include: { product: { select: { title: true } } },
+        },
+        customer: { select: { name: true, email: true } },
+        shippingAddress: true,
       },
-      customer: { select: { name: true, email: true } },
-      shippingAddress: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      orderBy: { createdAt: "desc" },
+    });
+  } catch { /* DB unreachable */ }
 
   return (
     <div>

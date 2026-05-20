@@ -9,7 +9,8 @@ export default async function AdminUsersPage({
 }) {
   const { role, search } = await searchParams;
 
-  const users = await prisma.user.findMany({
+  let users: Awaited<ReturnType<typeof prisma.user.findMany>> = [];
+  try { users = await prisma.user.findMany({
     where: {
       ...(role ? { role: role as "CUSTOMER" | "SELLER" | "ADMIN" } : {}),
       ...(search
@@ -32,7 +33,7 @@ export default async function AdminUsersPage({
     },
     orderBy: { createdAt: "desc" },
     take: 50,
-  });
+  }); } catch { /* DB unreachable */ }
 
   const roleColors: Record<string, string> = {
     CUSTOMER: "bg-gray-100 text-gray-700",

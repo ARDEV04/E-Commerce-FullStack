@@ -6,30 +6,38 @@ import { format } from "date-fns";
 import Link from "next/link";
 
 export default async function AdminDashboardPage() {
-  const [
-    totalUsers,
-    totalSellers,
-    totalProducts,
-    totalOrders,
-    revenueResult,
-    recentOrders,
-    pendingSellers,
-  ] = await prisma.$transaction([
-    prisma.user.count(),
-    prisma.sellerProfile.count({ where: { status: "APPROVED" } }),
-    prisma.product.count({ where: { status: "ACTIVE" } }),
-    prisma.order.count({ where: { status: { notIn: ["CANCELLED", "REFUNDED"] } } }),
-    prisma.order.aggregate({
-      where: { status: { notIn: ["CANCELLED", "REFUNDED"] } },
-      _sum: { total: true },
-    }),
-    prisma.order.findMany({
-      take: 8,
-      orderBy: { createdAt: "desc" },
-      include: { customer: { select: { name: true } } },
-    }),
-    prisma.sellerProfile.count({ where: { status: "PENDING" } }),
-  ]);
+  let totalUsers = 0, totalSellers = 0, totalProducts = 0, totalOrders = 0, pendingSellers = 0;
+  let revenueResult: { _sum: { total: number | null } } = { _sum: { total: null } };
+  let recentOrders: { id: string; total: number; status: string; createdAt: Date; customer: { name: string | null } }[] = [];
+
+  try {
+    [
+      totalUsers,
+      totalSellers,
+      totalProducts,
+      totalOrders,
+      revenueResult,
+      recentOrders,
+      pendingSellers,
+    ] = await prisma.$transaction([
+      prisma.user.count(),
+      prisma.sellerProfile.count({ where: { status: "APPROVED" } }),
+      prisma.product.count({ where: { status: "ACTIVE" } }),
+      prisma.order.count({ where: { status: { notIn: ["CANCELLED", "REFUNDED"] } } }),
+      prisma.order.aggregate({
+        where: { status: { notIn: ["CANCELLED", "REFUNDED"] } },
+        _sum: { total: true },
+      }),
+      prisma.order.findMany({
+        take: 8,
+        orderBy: { createdAt: "desc" },
+        include: { customer: { select: { name: true } } },
+      }),
+      prisma.sellerProfile.count({ where: { status: "PENDING" } }),
+    ]);
+  } catch {
+    // DB unreachable — render with empty state
+  }
 
   const stats = [
     {
